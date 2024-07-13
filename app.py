@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request
 import re
 import os
+from dotenv import load_dotenv
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from collections import defaultdict
 from pymongo import MongoClient
 
+load_dotenv()
 
 grade_to_points = {
     'A+': 10,
@@ -114,18 +116,11 @@ def calculate_results(reg_no):
         no_of_requests += 1
         
         try:
-            current_path = os.getcwd()
-            chrome_path = os.path.join(current_path, "chromedriver.exe")
-
-            chrome_options = Options()
+            chrome_options = webdriver.ChromeOptions()
             chrome_options.add_argument("--headless")
-            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-            service = Service(chrome_path)
-
-            try:
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-            except Exception as error:
-                print("Driver version is invalid", error)
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
                 
             driver.get("https://rvrjcce.ac.in/examcell/results/regnoresultsR.php")
             input_element = driver.find_element(By.CSS_SELECTOR, 'input[type="text"][style*="font-size:14px; color:red; width:100px;"]')
@@ -187,10 +182,10 @@ def calculate_results(reg_no):
     return name, results, tot_gpa, cumulative_gpa
 
 def store_results(name, reg_no, results, tot_gpa, cumulative_gpa):
-    user = os.environ['USER']
-    password = os.environ['PASSWORD']
-    database = os.environ['DB']
-    collection = os.environ['COLLECTION']
+    user = os.getenv('USER')
+    password = os.getenv('PASSWORD')
+    database = os.getenv('DB')
+    collection = os.getenv('COLLECTION')
     url = "mongodb+srv://"+user+":"+password+"@studentresults.o3jkbq0.mongodb.net/?retryWrites=true&w=majority&appName=StudentResults"
     
     client = MongoClient(url)
@@ -210,10 +205,10 @@ def store_results(name, reg_no, results, tot_gpa, cumulative_gpa):
     client.close()
     
 def reteive_previous_search_results(reg_no):
-    user = os.environ['USER']
-    password = os.environ['PASSWORD']
-    database = os.environ['DB']
-    collection = os.environ['COLLECTION']
+    user = os.getenv('USER')
+    password = os.getenv('PASSWORD')
+    database = os.getenv('DB')
+    collection = os.getenv('COLLECTION')
     url = "mongodb+srv://"+user+":"+password+"@studentresults.o3jkbq0.mongodb.net/?retryWrites=true&w=majority&appName=StudentResults"
     
     client = MongoClient(url)
@@ -229,7 +224,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/result', methods=['POST'])
-def available_space():
+def result():
     reg_no = request.form['input_text']
     name, results, tot_gpa, cumulative_gpa = calculate_results(reg_no)
     if name == "Invalid reg no":
@@ -253,4 +248,4 @@ def available_space():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

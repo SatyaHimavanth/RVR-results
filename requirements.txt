@@ -1,4 +1,6 @@
 Flask
-gunicorn
 selenium
 pymongo
+python-dotenv
+webdriver_manager
+gunicorn
